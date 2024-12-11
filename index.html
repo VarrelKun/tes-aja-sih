@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Image Generator</title>
+</head>
+<body>
+    <h1>Text to Image Generator</h1>
+
+    <label for="inputText">Enter text (e.g., "rimuru,slime"):</label>
+    <input type="text" id="inputText" placeholder="Type your text here">
+    
+    <button onclick="generateImage()">Generate Image</button>
+
+    <div id="imageContainer" style="margin-top: 20px;">
+        <p>Generated Image will appear here:</p>
+        <img id="generatedImage" src="" alt="Generated Image" style="max-width: 100%; height: auto;">
+    </div>
+
+    <script>
+        function generateImage() {
+            // Get the text entered by the user
+            var inputText = document.getElementById("inputText").value;
+            
+            // Check if inputText is not empty
+            if (inputText.trim() === "") {
+                alert("Please enter some text.");
+                return;
+            }
+            
+            // Construct the URL with the entered text
+            var apiUrl = "https://love.neekoi.me/kivotos?text=" + encodeURIComponent(inputText);
+            console.log("Generated API URL: ", apiUrl); // Log the URL for debugging
+
+            // Set the image source to the API URL
+            var imgElement = document.getElementById("generatedImage");
+            imgElement.src = apiUrl;  // Directly use the API URL as the image source
+        }
+    </script>
+</body>
+</html>
