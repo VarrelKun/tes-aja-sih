@@ -1,42 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text to Image Generator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Enhancer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #181818;
+      color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .drop-container {
+      border: 2px dashed #555;
+      padding: 20px;
+      color: #444;
+      cursor: pointer;
+    }
+    .result img {
+      max-width: 100%;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    .loader {
+      display: none;
+      color: #fff;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Text to Image Generator</h1>
+  <h1>Enhance Image</h1>
+  <div class="container">
+    <label class="drop-container">
+      Drop files here or click to upload
+      <input type="file" id="fileInput" accept="image/*" hidden>
+    </label>
+    <div id="loadingDiv" class="loader">Processing... Please wait</div>
+    <div id="resultDiv" class="result"></div>
+  </div>
 
-    <label for="inputText">Enter text (e.g., "rimuru,slime"):</label>
-    <input type="text" id="inputText" placeholder="Type your text here">
-    
-    <button onclick="generateImage()">Generate Image</button>
+  <script>
+    document.getElementById('fileInput').addEventListener('change', async function (e) {
+  const fileInput = e.target;
+  const formData = new FormData();
 
-    <div id="imageContainer" style="margin-top: 20px;">
-        <p>Generated Image will appear here:</p>
-        <img id="generatedImage" src="" alt="Generated Image" style="max-width: 100%; height: auto;">
-    </div>
+  // Clear previous result if a new file is selected
+  const resultDiv = document.getElementById('resultDiv');
+  resultDiv.innerHTML = ''; // Clear the previous result
 
-    <script>
-        function generateImage() {
-            // Get the text entered by the user
-            var inputText = document.getElementById("inputText").value;
-            
-            // Check if inputText is not empty
-            if (inputText.trim() === "") {
-                alert("Please enter some text.");
-                return;
-            }
-            
-            // Construct the URL with the entered text
-            var apiUrl = "https://love.neekoi.me/kivotos?text=" + encodeURIComponent(inputText);
-            console.log("Generated API URL: ", apiUrl); // Log the URL for debugging
+  if (fileInput.files.length === 0) {
+    console.log('[LOG] Tidak ada file yang dipilih.');
+    alert("Pilih file gambar terlebih dahulu.");
+    return;
+  }
 
-            // Set the image source to the API URL
-            var imgElement = document.getElementById("generatedImage");
-            imgElement.src = apiUrl;  // Directly use the API URL as the image source
-        }
-    </script>
+  console.log('[LOG] File dipilih, menyiapkan FormData...');
+  // Append file to FormData
+  formData.append('fileToUpload', fileInput.files[0]);
+  formData.append('reqtype', 'fileupload');
+
+  // Show loading animation
+  const loadingDiv = document.getElementById('loadingDiv');
+  loadingDiv.style.display = 'block';
+
+  try {
+    console.log('[LOG] Mengunggah file ke Catbox...');
+    // Upload file to Catbox
+    const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!catboxResponse.ok) {
+      console.error('[ERROR] Gagal mengunggah file ke Catbox. Status:', catboxResponse.status);
+      throw new Error('Gagal mengunggah gambar ke Catbox.');
+    }
+
+    console.log('[LOG] File berhasil diunggah ke Catbox. Mendapatkan URL...');
+    const catboxResult = await catboxResponse.text();
+
+    if (!catboxResult.includes('http')) {
+      console.error('[ERROR] Catbox tidak mengembalikan URL yang valid.');
+      throw new Error('Catbox gagal memberikan URL gambar.');
+    }
+
+    const catboxUrl = catboxResult.trim();
+    console.log('[LOG] URL dari Catbox:', catboxUrl);
+
+    console.log('[LOG] Mengirim permintaan ke API eksternal untuk meningkatkan kualitas gambar...');
+    // Kirim URL Catbox ke API eksternal
+    const enhanceUrl = `https://skizoasia.xyz/api/remini?apikey=isaac&url=${encodeURIComponent(catboxUrl)}`;
+    console.log('[LOG] URL API eksternal:', enhanceUrl);
+
+    const enhanceResponse = await fetch(enhanceUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MyApp/1.0)',
+      },
+    });
+
+    if (!enhanceResponse.ok) {
+      console.error('[ERROR] Gagal mendapatkan respons dari API eksternal. Status:', enhanceResponse.status);
+      throw new Error('Gagal menerima gambar dari API eksternal.');
+    }
+
+    console.log('[LOG] Respons dari API eksternal berhasil diterima. Mengonversi hasil ke Base64...');
+    const enhanceBlob = await enhanceResponse.blob();
+
+    // Convert Blob to Base64
+    const reader = new FileReader();
+    reader.onload = function () {
+      const enhancedImageUrl = reader.result;
+
+      console.log('[LOG] Gambar berhasil diproses. Menampilkan hasil...');
+      // Display the enhanced image
+      resultDiv.innerHTML = `
+        <h3>Result:</h3>
+        <img src="${enhancedImageUrl}" alt="Enhanced Image" id="enhancedImage">
+        <br>
+        <a href="${enhancedImageUrl}" download="enhanced_redzone.jpg" class="back-link">Download Gambar</a>
+      `;
+    };
+
+    reader.readAsDataURL(enhanceBlob);
+
+  } catch (error) {
+    console.error('[ERROR] Terjadi kesalahan:', error);
+    alert('Error: ' + error.message);
+  } finally {
+    console.log('[LOG] Proses selesai. Menyembunyikan animasi loading.');
+    // Hide the loading animation after the process is finished
+    loadingDiv.style.display = 'none';
+  }
+});
+
+  </script>
 </body>
 </html>
